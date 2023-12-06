@@ -79,7 +79,7 @@ Problem 5b: 52210644
             while key != "location":
                 key, m = maps[key]
                 val = m(val)
-            minvalue = min(minvalue, val)
+        minvalue = min(minvalue, val)
 
     return minvalue
 
