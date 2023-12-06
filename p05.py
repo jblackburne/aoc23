@@ -20,6 +20,39 @@ class RangeMap:
 
         return to_val
 
+    def eval_ranges(self, ranges):
+        # First divide up our input range into a number of contiguous ranges
+        # that each overlap with zero or one mapping ranges
+        inranges = ranges
+        for sfb, sn in zip(self.from_begin, self.num):
+            inranges_mod = []
+            for b, n in inranges:
+                if b < sfb and sfb + sn < b + n:
+                    inranges_mod.append((b, sfb - b))
+                    inranges_mod.append((sfb, sn))
+                    inranges_mod.append((sfb + sn, b + n - sfb - sn))
+                elif b < sfb < b + n:
+                    inranges_mod.append((b, sfb - b))
+                    inranges_mod.append((sfb, b + n - sfb))
+                elif b < sfb + sn < b + n:
+                    inranges_mod.append((b, sfb + sn - b))
+                    inranges_mod.append((sfb + sn, b + n - sfb - sn))
+                else:
+                    inranges_mod.append((b, n))
+            inranges = inranges_mod
+        inranges.sort()
+
+        # Now just evaluate the input ranges and return the mapped ranges
+        outranges = []
+        for b, n in inranges:
+            out = (b, n)  # default case if no map range
+            for sfb, stb, sn in zip(self.from_begin, self.to_begin, self.num):
+                if sfb <= b < sfb + sn:
+                    out = (stb + b - sfb, n)
+            outranges.append(out)
+
+        return outranges
+
 
 def ingest_p05(lines):
     # Just hard-code this crap
@@ -84,8 +117,25 @@ Problem 5b: 52210644
     return minvalue
 
 
+def p05b_fast(seeds, maps):
+    """Much more coding effort because I had to write the eval_ranges()
+    method. But extremely fast.
+    """
+    seediter = iter(seeds)
+    locranges = []
+    for seed_begin, nseed in zip(seediter, seediter):
+        key = "seed"
+        ranges = [(seed_begin, nseed)]
+        while key != "location":
+            key, m = maps[key]
+            ranges = m.eval_ranges(ranges)
+        locranges.extend(ranges)
+
+    return min([begin for begin, num in locranges])
+
+
 def p05b(seeds, maps):
-    return p05b_slow(seeds, maps)
+    return p05b_fast(seeds, maps)
 
 
 if __name__ == "__main__":
