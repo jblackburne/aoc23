@@ -12,43 +12,44 @@ def ingest_p12(lines):
     return data
 
 
-def _find_first_pos(spr, spos, seq):
-    pattern = "[\\.\\?]+?([#\\?]{{{}}})[\\.\\?]".format(seq)
-    m = re.match(pattern, spr[spos:])
-    return None if m is None else m.span(1)[0] + spos
-
-
-def _find_final_seq(spr, spos, seq):
-    pattern = "[\\.\\?]+?([#\\?]{{{}}})[\\.\\?]+$".format(seq)
-    m = re.match(pattern, spr[spos:])
-    return None if m is None else m.span(1)[0] + spos
-
-
 def p12a(data):
     counts = []
-    for spr, seqs in data:
+    for spr, seqs in data[9:10]:
         count = 0
         if len(seqs) == 0:
             counts.append(count)
             continue
-        spr = ".{}.".format(spr)  # pad it so the regex works
+        spr = spr.strip(".")
         tasks = [(0, seqs)]
         while len(tasks) > 0:
             spos, seqs = tasks.pop()
-            if len(seqs) == 1:
-                while spos < len(spr) - seqs[0]:
-                    mpos = _find_final_seq(spr, spos, seqs[0])
-                    if mpos is not None:
-                        count += 1
-                        spos = mpos
-                    else:
-                        break
-            else:
-                mpos = _find_first_pos(spr, spos, seqs[0])
-                if mpos is not None:
-                    tasks.append((mpos, seqs))
-                    tasks.append((mpos + seqs[0], seqs[1:]))
+            print(spr, spos, seqs)
+
+            # End condition
+            if len(seqs) == 0:
+                count += int(not any(c == "#" for c in spr[spos:]))
+                print("++")
+                continue
+
+            # Early check for not enough string remaining
+            min_needed = sum(seqs) + len(seqs) - 1
+            if spos > len(spr) - min_needed:
+                continue
+
+            # Try to match this sequence right here
+            pattern = "[#\\?]{{{}}}([\\.\\?]|$)".format(seqs[0])
+            m = re.match(pattern, spr[spos:])
+            sp = spos + 1
+            while sp < len(spr) and spr[sp - 1] == "#": sp += 1
+            while sp < len(spr) and spr[sp] == ".": sp += 1
+            tasks.append((sp, seqs))
+            if m is not None:
+                sp = spos + seqs[0] + 1
+                while sp < len(spr) and spr[sp] == ".": sp += 1
+                tasks.append((sp, seqs[1:]))
+
         counts.append(count)
+        print(count)
 
     return sum(counts)
 
@@ -70,4 +71,4 @@ if __name__ == "__main__":
     data = ingest_p12(lines)
 
     print("Problem 12a: {}".format(p12a(data)))
-    print("Problem 12b: {}".format(p12b(data)))
+    #print("Problem 12b: {}".format(p12b(data)))
