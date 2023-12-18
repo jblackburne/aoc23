@@ -14,7 +14,7 @@ def ingest_p12(lines):
 
 def p12a(data):
     counts = []
-    for spr, seqs in data[9:10]:
+    for spr, seqs in data:
         count = 0
         if len(seqs) == 0:
             counts.append(count)
@@ -23,12 +23,10 @@ def p12a(data):
         tasks = [(0, seqs)]
         while len(tasks) > 0:
             spos, seqs = tasks.pop()
-            print(spr, spos, seqs)
 
             # End condition
             if len(seqs) == 0:
                 count += int(not any(c == "#" for c in spr[spos:]))
-                print("++")
                 continue
 
             # Early check for not enough string remaining
@@ -39,17 +37,16 @@ def p12a(data):
             # Try to match this sequence right here
             pattern = "[#\\?]{{{}}}([\\.\\?]|$)".format(seqs[0])
             m = re.match(pattern, spr[spos:])
-            sp = spos + 1
-            while sp < len(spr) and spr[sp - 1] == "#": sp += 1
-            while sp < len(spr) and spr[sp] == ".": sp += 1
-            tasks.append((sp, seqs))
+            if spr[spos] == "?":
+                sp = spos + 1
+                while sp < len(spr) and spr[sp] == ".": sp += 1
+                tasks.append((sp, seqs))
             if m is not None:
                 sp = spos + seqs[0] + 1
                 while sp < len(spr) and spr[sp] == ".": sp += 1
                 tasks.append((sp, seqs[1:]))
 
         counts.append(count)
-        print(count)
 
     return sum(counts)
 
