@@ -1,5 +1,6 @@
 import sys
 import re
+from functools import lru_cache
 
 
 def ingest_p12(lines):
@@ -12,6 +13,33 @@ def ingest_p12(lines):
     return data
 
 
+@lru_cache(maxsize=None)
+def _dfs(spr, spos, seqs):
+    # End condition
+    if len(seqs) == 0:
+        return int(not any(c == "#" for c in spr[spos:]))
+
+    # Early check for not enough string remaining
+    min_needed = sum(seqs) + len(seqs) - 1
+    if spos > len(spr) - min_needed:
+        return 0
+
+    # Try to match this sequence right here
+    pattern = "[#\\?]{{{}}}([\\.\\?]|$)".format(seqs[0])
+    m = re.match(pattern, spr[spos:])
+    ret = 0
+    if spr[spos] == "?":
+        sp = spos + 1
+        while sp < len(spr) and spr[sp] == ".": sp += 1
+        ret += _dfs(spr, sp, seqs)
+    if m is not None:
+        sp = spos + seqs[0] + 1
+        while sp < len(spr) and spr[sp] == ".": sp += 1
+        ret += _dfs(spr, sp, seqs[1:])
+
+    return ret
+
+
 def p12a(data):
     counts = []
     for spr, seqs in data:
@@ -20,31 +48,7 @@ def p12a(data):
             counts.append(count)
             continue
         spr = spr.strip(".")
-        tasks = [(0, seqs)]
-        while len(tasks) > 0:
-            spos, seqs = tasks.pop()
-
-            # End condition
-            if len(seqs) == 0:
-                count += int(not any(c == "#" for c in spr[spos:]))
-                continue
-
-            # Early check for not enough string remaining
-            min_needed = sum(seqs) + len(seqs) - 1
-            if spos > len(spr) - min_needed:
-                continue
-
-            # Try to match this sequence right here
-            pattern = "[#\\?]{{{}}}([\\.\\?]|$)".format(seqs[0])
-            m = re.match(pattern, spr[spos:])
-            if spr[spos] == "?":
-                sp = spos + 1
-                while sp < len(spr) and spr[sp] == ".": sp += 1
-                tasks.append((sp, seqs))
-            if m is not None:
-                sp = spos + seqs[0] + 1
-                while sp < len(spr) and spr[sp] == ".": sp += 1
-                tasks.append((sp, seqs[1:]))
+        count = _dfs(spr, 0, seqs)
 
         counts.append(count)
 
@@ -53,7 +57,6 @@ def p12a(data):
 
 def p12b(data):
     # Unfold the data, then just feed it through part a
-    # DOH! This is too slow
     data = [("?".join([spr] * 5), seqs * 5) for (spr, seqs) in data]
     return p12a(data)
 
@@ -68,4 +71,4 @@ if __name__ == "__main__":
     data = ingest_p12(lines)
 
     print("Problem 12a: {}".format(p12a(data)))
-    #print("Problem 12b: {}".format(p12b(data)))
+    print("Problem 12b: {}".format(p12b(data)))
