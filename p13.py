@@ -15,6 +15,9 @@ def ingest_p13(lines):
         else:
             current.append(list(line.strip()))
 
+    if len(current) > 0:
+        data.append(np.array(current))
+
     return data
 
 
