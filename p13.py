@@ -1,6 +1,4 @@
 import sys
-from itertools import combinations
-from collections import Counter
 
 import numpy as np
 
@@ -23,38 +21,24 @@ def ingest_p13(lines):
 
 def p13a(data):
     totals = []
-    for iarr, arr in enumerate(data):
+    for arr in data:
         nrow, ncol = arr.shape
-        idxdict = {}
-        for irow, row in enumerate(arr):
-            rowstr = "".join(row)
-            idxs = idxdict.get((rowstr, "row"), [])
-            idxs.append(irow)
-            idxdict[(rowstr, "row")] = idxs
-        for icol, col in enumerate(arr.T):
-            colstr = "".join(col)
-            idxs = idxdict.get((colstr, "col"), [])
-            idxs.append(icol)
-            idxdict[(colstr, "col")] = idxs
 
-        # Look for mirror candidates and count how many rows or cols support them
-        candidates = []
-        for (_, rc), idxs in idxdict.items():
-            if len(idxs) < 2:
-                continue
-            num = nrow if rc == "row" else ncol
-            for i, j in combinations(idxs, 2):
-                irc2 = i + j + 1
-                if irc2 % 2 == 0:
-                    candidates.append((rc, irc2 // 2, num))
-        cand_support = Counter(candidates)
+        # Calculate pairwise Hamming distances between pairs of rows and
+        # pairs of columns
+        # These (n x n) arrays will have diagonals of zeros running SW to NE
+        # when there are mirrors
+        rowham = np.array([[np.count_nonzero(arr[i] != arr[j])
+                            for i in range(nrow)] for j in range(nrow)])
+        colham = np.array([[np.count_nonzero(arr[:, i] != arr[:, j])
+                            for i in range(ncol)] for j in range(ncol)])
 
-        # A candidate is a legit mirror iff its support is enough to reach the edge
-        mirrors = [(rc, irc) for (rc, irc, nrc), supp in cand_support.items()
-                   if supp == min(irc, nrc - irc)]
+        rowmirrors = np.nonzero([np.trace(rowham[::-1], offset=i) == 0
+                                 for i in range(-nrow+2, nrow-1, 2)])[0] + 1
+        colmirrors = np.nonzero([np.trace(colham[::-1], offset=i) == 0
+                                 for i in range(-ncol+2, ncol-1, 2)])[0] + 1
 
-        # Return the sum of mirror columns plus 100 * sum of mirror rows
-        totals.append(sum([irc if rc == "col" else 100 * irc for (rc, irc) in mirrors]))
+        totals.append(rowmirrors.sum() * 100 + colmirrors.sum())
 
     return sum(totals)
 
