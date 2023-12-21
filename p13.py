@@ -19,7 +19,7 @@ def ingest_p13(lines):
     return data
 
 
-def p13a(data):
+def p13a(data, nsmudges=0):
     totals = []
     for arr in data:
         nrow, ncol = arr.shape
@@ -33,9 +33,9 @@ def p13a(data):
         colham = np.array([[np.count_nonzero(arr[:, i] != arr[:, j])
                             for i in range(ncol)] for j in range(ncol)])
 
-        rowmirrors = np.nonzero([np.trace(rowham[::-1], offset=i) == 0
+        rowmirrors = np.nonzero([np.trace(rowham[::-1], offset=i) == 2 * nsmudges
                                  for i in range(-nrow+2, nrow-1, 2)])[0] + 1
-        colmirrors = np.nonzero([np.trace(colham[::-1], offset=i) == 0
+        colmirrors = np.nonzero([np.trace(colham[::-1], offset=i) == 2 * nsmudges
                                  for i in range(-ncol+2, ncol-1, 2)])[0] + 1
 
         totals.append(rowmirrors.sum() * 100 + colmirrors.sum())
@@ -53,3 +53,4 @@ if __name__ == "__main__":
     data = ingest_p13(lines)
 
     print("Problem 13a: {}".format(p13a(data)))
+    print("Problem 13b: {}".format(p13a(data, nsmudges=1)))
