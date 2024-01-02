@@ -20,44 +20,42 @@ def p17a(data, max_straight=3):
     begin = (0, 0)
     end = (nrow - 1, ncol - 1)
 
-    min_cost = np.full((nrow, ncol, 5), 1 << 30)
+    # Needed for the algorithm below
+    assert(N % 2 == S % 2 and E % 2 == W % 2)
+
+    min_cost = np.full((nrow, ncol, 2), 1 << 30)
     tasks = PriorityQueue()
-    tasks.put_nowait((0, (begin[0] + DELTA[E][0], begin[1] + DELTA[E][1]), E))
-    tasks.put_nowait((0, (begin[0] + DELTA[S][0], begin[1] + DELTA[S][1]), S))
-    while tasks.qsize() > 0:
-        tot_cost, (irow, icol), direction = tasks.get()
-        for istep in range(max_straight):
-            if not (0 <= irow < nrow and 0 <= icol < ncol):
-                break
-            tot_cost += data[irow, icol]
-            if istep == max_straight - 1:
-                # Bounded in one direction. Stop if another path
-                # bounded in this direction or unbounded has an equal
-                # or lower min cost. Otherwise set this direction's
-                # min cost
-                if (min_cost[irow, icol, UNBOUND] <= tot_cost or
-                    min_cost[irow, icol, direction] <= tot_cost):
-                    break
-                min_cost[irow, icol, direction] = tot_cost
-            else:
-                # Unbounded. Stop if another unbounded path has an
-                # equal or lower min cost. Otherwise set the unbounded
-                # min cost
-                if min_cost[irow, icol, UNBOUND] <= tot_cost:
-                    break
-                min_cost[irow, icol, UNBOUND] = tot_cost
+    for icol in range(1, max_straight + 1):
+        dest = (begin[0] + icol * DELTA[E][0], begin[1] + icol * DELTA[E][1])
+        tasks.put_nowait((data[0, 1:icol].sum(), dest, E))
+    for irow in range(1, max_straight + 1):
+        dest = (begin[0] + irow * DELTA[S][0], begin[1] + irow * DELTA[S][1])
+        tasks.put_nowait((data[1:irow, 0].sum(), dest, S))
+    while True:
+        tot_cost, (irow, icol), direction = tasks.get_nowait()
 
-            branches = (E, W) if direction in (N, S) else (N, S)
-            for branch in branches:
-                step = DELTA[branch]
-                tasks.put_nowait((tot_cost, (irow + step[0], icol + step[1]), branch))
+        if not (0 <= irow < nrow and 0 <= icol < ncol):
+            continue
+        if min_cost[irow, icol, direction % 2] <= tot_cost:
+            continue
+        else:
+            min_cost[irow, icol, direction % 2] = tot_cost
+        tot_cost += data[irow, icol]
 
-            step = DELTA[direction]
-            irow += step[0]
-            icol += step[1]
+        if (irow, icol) == end:
+            return tot_cost
 
-    # Now the min cost at the end is the answer
-    return np.min(min_cost[end])
+        branches = (E, W) if direction in (N, S) else (N, S)
+        for branch in branches:
+            new_cost = tot_cost
+            new_irow = irow
+            new_icol = icol
+            for _ in range(max_straight):
+                new_irow += DELTA[branch][0]
+                new_icol += DELTA[branch][1]
+                if (0 <= new_irow < nrow and 0 <= new_icol < ncol):
+                    tasks.put_nowait((new_cost, (new_irow, new_icol), branch))
+                    new_cost += data[new_irow, new_icol]
 
 
 if __name__ == "__main__":
